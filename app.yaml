@@ -1,0 +1,22 @@
+application: tskmon
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /assets
+  static_dir: _static
+  
+- url: /
+  script: tskmon.app
+  
+- url: /api/.*
+  script: tskmon.app
+  
+libraries:
+- name: jinja2
+  version: '2.6'
+  
+builtins:
+- admin_redirect: on

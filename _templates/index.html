@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+{##
+ ##
+ # index.html: Main page template file for the tskmon task monitoring server.
+ ##
+ # © 2013 Christopher E. Granade (cgranade@gmail.com)
+ #
+ # This file is a part of the tskmon project.
+ # Licensed under the AGPL version 3.
+ ##
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU Affero General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ # GNU Affero General Public License for more details.
+ #
+ # You should have received a copy of the GNU Affero General Public License
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ##}
+ 
+{##
+ # TODO:
+ #   - Refactor template to take advantage of jinja2 template inheritance.
+ #   - Make badge do something useful.
+ #}
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>taskmon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="assets/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+
+      @media (max-width: 980px) {
+        /* Enable use of floated navbar text */
+        .navbar-text.pull-right {
+          float: none;
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+    </style>
+    <link href="assets/bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="static/bootstrap/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <!--
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="static/bootstrap/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="static/bootstrap/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="static/bootstrap/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="static/bootstrap/ico/apple-touch-icon-57-precomposed.png">
+    <link rel="shortcut icon" href="static/bootstrap/ico/favicon.png">
+    -->
+  </head>
+
+  <body>
+    
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <a class="brand" href="#">taskmon</a>
+            <ul class="nav">
+                <li id="nav-tasks" class="active"><a href="#">Tasks</a></li>
+                <li id="nav-about"><a href="#">About</a></li>
+            </ul>
+            {% if users.get_current_user() %}
+                <a class="btn btn-primary pull-right" type="button" href="{{ users.create_logout_url('/') }}">Logout {{ users.get_current_user() }}</a>
+            {% else %}
+                <a class="btn btn-primary pull-right" type="button" href="{{ users.create_login_url('/') }}">Login</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div id="main-body">
+        <div class="row">
+            <div class="span3 sidebar-nav">
+                <ul class="nav nav-tabs nav-stacked">
+                  <li><a href="#in-progress">In Progress <span class="badge pull-right">1</span></a></li>
+                  <li><a href="#completed">Completed <span class="badge pull-right">0</span></a></li>
+                  <li><a href="#cancelled">Cancelled <span class="badge pull-right">0</span></a></li>
+                </ul>
+            </div>
+            <div class="span9" id="inner-body">
+                <h3 id="in-progress">In Progress</h3>
+                <div class="well" id="task-well-template" style="display: none">
+                    <h4>Task Title</h4>
+                    <span class="status-field">Status</span>
+                    <div class="progress">
+                      <div class="bar" style="width: 0%;"></div>
+                    </div>
+                    <span>ETA: </span>
+                    <div class="pull-right">
+                        <a class="btn btn-canceldelete" href="#">Cancel and Delete</a>
+                    </div>
+                </div>
+                <!--
+                <h3 id="completed">Completed</h3>
+                <h3 id="cancelled">Cancelled</h3>
+                -->
+            </div>
+        </div> <!-- /.row -->
+    </div> <!-- /#main-body -->
+    
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="http://code.jquery.com/jquery-migrate-1.1.0.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/coffee-script/1.4.0/coffee-script.min.js"></script>
+    
+    <script type="text/coffeescript">
+        # TODO: compile ahead of time.
+        # TODO: listen for new tasks.
+        # TODO: update badge
+        
+        create_task_well = (uri) ->
+            new_well = $('#task-well-template').clone()
+            new_well.uri = uri
+            
+            $('.btn-canceldelete', new_well).click ->
+                $.ajax({
+                    url: new_well.uri,
+                    type: 'DELETE'
+                }).done((data) ->
+                    if data.result == "success"
+                        $(new_well).remove()
+                    else
+                        console.log(data)
+                )
+            
+            refresh_well(new_well)
+            setInterval((() -> refresh_well(new_well)), 20000)
+            
+            new_well.appendTo('#inner-body')
+            new_well.show()
+            new_well
+            
+        refresh_well = (well) ->
+            $.ajax({
+                url: well.uri
+            }).done((data) ->
+                $('h4', well).text(data.title)
+                $('span.status-field', well).text(data.status)
+                $('.bar', well).css("width", "#{ 100.0 * data.progress / data.max }%")
+            )
+            
+        create_task_wells = ->
+            $.ajax({
+                url: 'api/tasks'
+            }).done((data) -> 
+                create_task_well(task.uri) for task in data
+            )
+            
+        $(document).ready ->
+            create_task_wells()
+            
+    </script>
+
+  </body>
+</html>
+
